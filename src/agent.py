@@ -51,7 +51,7 @@ class Agent(object):
         prob = np.zeros_like(qval, dtype=np.float)
 
         # Case softmax is set
-        if self.softmax:
+        if self.use_softmax:
             # Compute probabilities according to softmax
             prob = sp.softmax(qval / epsilon)
 
@@ -63,11 +63,18 @@ class Agent(object):
             prob[np.argmax(qval)] = 1 - epsilon
 
         # Return an action index at random, using computed probabilities
-        return np.random.choice(range(0, self.num_actions), p=prob)
+        return np.random.choice(range(self.num_actions), p=prob)
 
     def update_state(self, state, action, reward, next_state, alpha=0.0, epsilon=0.0):
         """ Update agent's state
 
+        Args
+        state (iterable)        Current agent's cell/state
+        action (int)            Current action's index
+        reward (float)          Reward retrieved for performing chosen action
+        next_state (iterable)   Next agent's cell/state
+        alpha (float)           Alpha factor to apply
+        epsilon (float)         Epsilon factor to apply
         """
         # Define epsilon (only for SARSA setting)
         epsilon = epsilon if self.use_sarsa else 0.0
