@@ -99,11 +99,12 @@ class Environment(object):
         # Return both current state and reward
         return (self.state, reward)
 
-    def plot(self, cell_size=5):
+    def plot(self, cell_size=5, font_size=18):
         """ Plot the environment
 
         Args
         cell_size (float)   Size of a single cell plotted
+        font_size (float)   Size of the font used in labels
 
         Return
         (plt.Axis)          Plotted environment
@@ -151,8 +152,8 @@ class Environment(object):
         ax.set_xticks(x_ticks)
         ax.set_yticks(y_ticks)
         # Set x and y axis major ticks labels
-        ax.set_xticklabels(x_ticks)
-        ax.set_yticklabels(y_ticks)
+        ax.set_xticklabels(x_ticks, fontsize=font_size)
+        ax.set_yticklabels(y_ticks, fontsize=font_size)
 
         # Define x and y axis minor ticks positions
         ax.set_xticks(x_ticks - 0.5, minor=True)
@@ -160,8 +161,8 @@ class Environment(object):
         # Set girdlines, according to minor ticks
         ax.grid(which='minor', color='black', linestyle='-', linewidth=1)
 
-        # Plot start point
-        ax.text(x=goal[0], y=goal[1], s='GOAL', ha='center', va='center')
+        # # Plot start point
+        # ax.text(x=goal[0], y=goal[1], s='GOAL', ha='center', va='center')
 
         # Put x ticks on top of image
         ax.xaxis.tick_top()

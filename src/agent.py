@@ -43,7 +43,7 @@ class Agent(object):
 
         Args
         state (int)         Index of the actual state
-        epsilon (float)     ???
+        epsilon (float)     Value of the epsilon decay
         """
         # For current state, retrieve possible actions
         qval = self.qtable[state, :]
@@ -54,7 +54,6 @@ class Agent(object):
         if self.use_softmax:
             # Compute probabilities according to softmax
             prob = sp.softmax(qval / epsilon)
-
         # Otherwise
         else:
             # Assign equal probabilities to each action

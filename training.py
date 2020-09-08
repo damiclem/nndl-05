@@ -64,7 +64,7 @@ if __name__ == '__main__':
     )
     # Add argument: length of each training episode
     parser.add_argument(
-        '--len_episodes', type=int, default=10,
+        '--len_episodes', type=int, default=200,
         help='Define length of each training episode'
     )
     # Add argument: heigh of the environment
@@ -74,17 +74,17 @@ if __name__ == '__main__':
     )
     # Add argument: width of the environemnt
     parser.add_argument(
-        '--env_width', type=int, default=10,
+        '--env_width', type=int, default=15,
         help='Define width of the environment'
     )
     # Add argument: starting point
     parser.add_argument(
-        '--start_point', type=int, required=False,
+        '--start_point', type=int, default=149, required=False,
         help='Define a starting point for the agent'
     )
     # Add argument: goal point
     parser.add_argument(
-        '--goal_point', type=int, required=False,
+        '--goal_point', type=int, default=15, required=False,
         help='Define a goal point to reach for the agent'
     )
     # Add argument: wall points
@@ -106,7 +106,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--sand_points', type=int, nargs='*',
         default=[
-            30, 45, 60, 75, 90, 100, 49, 50, 51,
+            30, 45, 60, 75, 90, 100, 49, 50, 51, 19, 34, 64, 79,
             100, 101, 102, 103, 115, 116, 117, 118, 130, 131, 132, 133
         ],
         help='Define points where agent gets penalty'
@@ -126,6 +126,16 @@ if __name__ == '__main__':
         '--use_sarsa', type=int, default=0,
         help='Whether to use SARSA approach or not'
     )
+    # Add argument: alpha value
+    parser.add_argument(
+        '--alpha_decay', type=float, default=0.25,
+        help='Alpha decay factor'
+    )
+    # Add argument: epsilon value
+    parser.add_argument(
+        '--epsilon_decay', type=float, nargs='*', default=[0.8, 0.001],
+        help='Linear epsilon decay'
+    )
     # Add argument: save after some episodes
     parser.add_argument(
         '--save_after', type=int, default=10,
@@ -133,7 +143,8 @@ if __name__ == '__main__':
     )
     # Add argument: save to defined folder
     parser.add_argument(
-        '--agent_path', type=str, default='data/%s' % now.strftime('%Y_%m_%d_%H_%M_%S'),
+        '--agent_path', type=str,
+        default='data/%s' % now.strftime('%Y_%m_%d_%H_%M_%S'),
         help='Path where to save trained model'
     )
     # Add argument: whether to make trace gif
@@ -158,14 +169,17 @@ if __name__ == '__main__':
     actions = [*Environment.actions.keys()]
 
     # Define alpha factors
-    alpha = np.ones(args.num_episodes, dtype=np.float) * 0.50
+    alpha = np.ones(args.num_episodes, dtype=np.float) * args.alpha_decay
     # Define epsilon factor
-    epsilon = np.linspace(0.8, 0.001, args.num_episodes, dtype=np.float)
+    epsilon = np.linspace(*args.epsilon_decay, args.num_episodes, dtype=np.float)
 
     # Initialize the agent
     agent = Agent(
         num_states=(args.env_width * args.env_height),
-        num_actions=len(actions)
+        num_actions=len(actions),
+        prc_discount=float(args.prc_discount),
+        use_softmax=bool(args.use_softmax),
+        use_sarsa=bool(args.use_sarsa)
     )
 
     # Define all available points
@@ -244,11 +258,11 @@ if __name__ == '__main__':
             trace += [next_state]
             # Update reward
             reward += _reward
+            # Store current step reward
+            rewards += [_reward]
 
         # Update reward (compute average)
         reward /= args.len_episodes
-        # Store reward
-        rewards += [reward]
 
         # Save the agent
         if ((episode + 1) % args.save_after == 0):
@@ -283,12 +297,19 @@ if __name__ == '__main__':
 
         # Plot initial environment
         fig, ax = env.plot(cell_size=2)
+        # # Store empty image
+        # plt.savefig(args.agent_path + '/trace/%09d.png' % 0, dpi=100)
         # Add route: scatterplot
-        ax.plot(trace[1:i, 0], trace[1:i, 1], ls='', marker='o', markersize=24, color='tab:blue')
+        ax.plot(trace[1:i, 0], trace[1:i, 1], ls='', marker='o', markersize=16, color='tab:blue')
         # Add initial point: scatterplot
-        ax.plot(trace[[0], 0], trace[[0], 1], ls='', marker='X', markersize=24, color='tab:blue')
+        ax.plot(trace[[0], 0], trace[[0], 1], ls='', marker='X', markersize=16, color='tab:blue')
         # Store image
-        plt.savefig(args.agent_path + '/trace/%09d.png' % i, dpi=20)
+        plt.savefig(args.agent_path + '/trace/%09d.png' % i, dpi=100)
+
+        # Case current is the last iteration
+        if(i + 1) == trace.shape[0]:
+            # Show plot
+            plt.show()
         # Close plot
         plt.close()
 
@@ -297,17 +318,46 @@ if __name__ == '__main__':
         # Make GIF
         make_gif(args.agent_path + '/trace', args.agent_path + '/trace.gif')
 
-    # Plot mean reward
+    # Make rewards array (num episodes x len episodes)
+    rewards = np.array(rewards, dtype=np.float).reshape(-1, args.len_episodes)
+    # Store rewards to csv
+    np.savetxt(args.agent_path + '/rewards.csv', rewards, delimiter=',')
+
+    # Initialize plot: mean reward
     fig, ax = plt.subplots(figsize=(15, 5))
     # Set title and labels
     ax.set_title('Mean reward per episode')
     ax.set_xlabel('Episode')
     ax.set_ylabel('Reward (mean)')
+    # Set y boundaries
+    ax.set_ylim(-1.0, 1.0)
     # Make scatterplot
-    ax.plot(np.arange(1, len(rewards) + 1), np.array(rewards), '.-')
+    ax.plot(np.arange(1, rewards.shape[0] + 1), np.mean(rewards, axis=1), '.-')
     # Save plot
     plt.savefig(args.agent_path + '/rewards.png')
     # Show plot
     plt.show()
     # Close plot
     plt.close()
+
+    # # Initialize plot: rewards per episode
+    # fig, ax = plt.subplots(figsize=(15, 5))
+    # # Set title and labels
+    # ax.set_title('Reward per step')
+    # ax.set_xlabel('Step')
+    # ax.set_ylabel('Reward')
+    # # Define labels
+    # labels = np.arange(0, rewards.shape[0], 100)
+    # # Loop through each episode
+    # for i in labels:
+    #     # Plot define x and y arrays
+    #     x = np.arange(1, rewards.shape[1] + 1)
+    #     y = rewards[i, :]
+    #     # Make scatterplot
+    #     ax.plot(x, y, '.-', alpha=0.9)
+    # # Show legend
+    # ax.legend(labels)
+    # # Show plot
+    # plt.show()
+    # # Close plot
+    # plt.close()

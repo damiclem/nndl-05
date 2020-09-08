@@ -130,3 +130,8 @@ dmypy.json
 
 # Exclude data directory
 data/*
+# Allow specific subfolders
+!data/all_obstacles
+!data/no_obstacles
+!data/only_sands
+!data/*.png
